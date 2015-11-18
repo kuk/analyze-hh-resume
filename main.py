@@ -204,37 +204,55 @@ def show_gender_distribution(resumes):
     print 'Undefined: {0:0.2f}%'.format(float(undefined) / total * 100)
 
 
-def show_salary_distribution(resumes):
+def show_currency_distribution(resumes):
     data = Counter()
     total = 0
-    undefined_currency = 0
-    total_salary = 0
-    undefined_salary = 0
-    unbound_salary = 0
+    rur = 0
+    undefined = 0
     for resume in resumes:
         total += 1
         currency = resume.currency
         if currency is None:
-            undefined_currency += 1
+            undefined += 1
         else:
-            total_salary += 1
+            if currency == 'RUR':
+                rur += 1
+            data[currency] += 1
+    fig, ax = plt.subplots()
+    table = pd.Series(data)
+    table = table.sort_values(ascending=False)
+    table.plot(ax=ax, kind='bar')
+    print 'Undefined: {0:0.2f}%'.format(float(undefined) / total * 100)
+    print 'RUR from defined: {0:0.2f}%'.format(float(rur) / (total - undefined) * 100)
+
+
+def show_salary_distribution(resumes):
+    data = Counter()
+    total = 0
+    undefined = 0
+    unbound = 0
+    for resume in resumes:
+        total += 1
+        currency = resume.currency
+        if currency is not None:
+            total += 1
             salary = resume.salary
             if salary is None or salary == 0:
-                undefined_salary += 1
+                undefined += 1
             else:
                 if salary < 180000:
                     data[currency, salary] += 1
                 else:
-                    unbound_salary += 1
+                    unbound += 1
     table = pd.Series(data)
     table = table.unstack(level=0)
+    order = table.count()
+    order = order.sort_values(ascending=False).index
+    table = table.reindex(columns=order)
     table.plot(subplots=True, layout=(3, -1), figsize=(12, 8))
-    print 'Undefined currency: {0:0.2f}%'.format(
-        float(undefined_currency) / total * 100
-    )
     print 'Undefined salary if currency defined: {0:0.2f}%'.format(
-        float(undefined_salary) / total_salary * 100
+        float(undefined) / total * 100
     )
-    print 'Unbound salary: {0:0.2f}%'.format(
-        float(unbound_salary) / total_salary * 100
+    print 'Unbound salary if currency defined: {0:0.2f}%'.format(
+        float(unbound) / total * 100
     )

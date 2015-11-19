@@ -1,0 +1,1 @@
+{"errors": [{"type": "bad_argument", "value": "text"}], "bad_argument": "text", "bad_arguments": [{"name": "text", "description": "text length must be 2 or greater"}], "description": "text length must be 2 or greater"}

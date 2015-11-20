@@ -645,9 +645,39 @@ def show_university_salary(resumes, university_names):
         salaries.extend(update)
         universities[university] = salaries
     table = pd.DataFrame(universities)
-    order = table.mean(axis=0)
-    order = order.sort_values(ascending=False).index
-    order = order[:30]
+    order = [
+        u'МГУ',
+        u'МГТУ им. Баумана',
+        u'МПГУ',
+        u'РЭА им.Плеханова',
+        u'ГУУ',
+        u'МАИ',
+        u'МГПУ',
+        u'РУДН',
+        u'ГУ-ВШЭ',
+        u'МЭСИ',
+        u'РГГУ',
+        u'ММА им. Сеченова',
+        u'МИРЭА',
+        u'МГИМО (у) МИД РФ',
+        u'МГСУ-МИСИ',
+        u'МАДИ',
+        u'МИИТ',
+        u'МИФИ',
+        u'РГСУ',
+        u'МГЛУ',
+        u'МЭИ',
+        u'МГИУ',
+        u'МАТИ',
+        u'МФПА',
+        u'МГУПИ',
+        u'МГОПУ им.Шолохова',
+        u'МФЮА',
+        u'МТУСИ',
+        u'МГТУ МАМИ',
+        u'РГТЭУ',
+        u'МГЮА',
+    ]
     table = table.reindex(columns=order)
     fig, ax = plt.subplots()
     table.plot(kind='box', ax=ax)
@@ -664,7 +694,7 @@ def shorten_string(string, cap=20):
 
 def show_geography_specializations(resumes, russian_areas, specializations):
     geography_specializations = defaultdict(Counter)
-    for resume in sample(resumes, 100000):
+    for resume in resumes:
         area = russian_areas.get(resume.area_id)
         if area:
             area = area.name
@@ -679,18 +709,131 @@ def show_geography_specializations(resumes, russian_areas, specializations):
         total += groups
         order[area] = sum(groups.itervalues())
     order = [area for area, _ in order.most_common()]
-    top = [specialization for specialization, _ in total.most_common(10)]
+    selection = map(shorten_string, [
+        u'Страхование',
+        u'Закупки',
+        u'Государственная служба, некоммерческие организации',
+        u'Добыча сырья',
+        u'Спортивные клубы, фитнес, салоны красоты',
+        u'Наука, образование',
+        u'Автомобильный бизнес',
+        u'Искусство, развлечения, масс-медиа',
+        u'Юристы',
+        u'Медицина, фармацевтика',
+        u'Управление персоналом, тренинги',
+        u'Туризм, гостиницы, рестораны',
+        u'Маркетинг, реклама, PR',
+        u'Рабочий персонал',
+        u'Банки, инвестиции, лизинг',
+        u'Информационные технологии, интернет, телеком',
+        u'Строительство, недвижимость',
+        u'Производство',
+        u'Бухгалтерия, управленческий учет, финансы предприятия',
+        u'Транспорт, логистика',
+        u'Продажи',
+    ])
     total = pd.Series(total)
-    total = total.reindex(top)
+    total = total.reindex(selection)
     total = total / total.sum()
-    fig, axis = plt.subplots(5, 3)
-    fig.set_size_inches(18, 10)
+    fig, axis = plt.subplots(10, 3)
+    fig.set_size_inches(18, 50)
     for area, ax in zip(order, axis.flatten()):
         table = pd.Series(geography_specializations[area])
-        table = table.reindex(index=top)
+        table = table.reindex(index=selection)
         table = table / table.sum()
         table = table / total - 1
         table.plot(kind='barh', ax=ax)
         ax.set_title(area)
+        ax.set_xlim(-1, 1)
+    fig.tight_layout()
+
+
+def show_universities_specializations(resumes, university_names, specializations):
+    university_specializations = defaultdict(Counter)
+    for resume in resumes:
+        age = resume.age
+        if age and age > 25 and resume.area_id == 1:
+            for education in resume.educations:
+                university = university_names.get(education)
+                if university:
+                    groups = {
+                        specializations[_].group.name
+                        for _ in resume.specializations
+                    }
+                    for group in groups:
+                        group = shorten_string(group)
+                        university_specializations[university][group] += 1
+    total = Counter()
+    for university in university_specializations:
+        groups = university_specializations[university]
+        total += groups
+    order = [
+        u'МГУ',
+        u'МГТУ им. Баумана',
+        u'МПГУ',
+        u'РЭА им.Плеханова',
+        u'ГУУ',
+        u'МАИ',
+        u'МГПУ',
+        u'РУДН',
+        u'ГУ-ВШЭ',
+        u'МЭСИ',
+        u'РГГУ',
+        u'ММА им. Сеченова',
+        u'МИРЭА',
+        u'МГИМО (у) МИД РФ',
+        u'МГСУ-МИСИ',
+        u'МАДИ',
+        u'МИИТ',
+        u'МИФИ',
+        u'РГСУ',
+        u'МГЛУ',
+        u'МЭИ',
+        u'МГИУ',
+        u'МАТИ',
+        u'МФПА',
+        u'МГУПИ',
+        u'МГОПУ им.Шолохова',
+        u'МФЮА',
+        u'МТУСИ',
+        u'МГТУ МАМИ',
+        u'РГТЭУ',
+        u'МГЮА',
+    ]
+    selection = map(shorten_string, [
+        u'Страхование',
+        u'Закупки',
+        u'Государственная служба, некоммерческие организации',
+        u'Добыча сырья',
+        u'Спортивные клубы, фитнес, салоны красоты',
+        u'Наука, образование',
+        u'Автомобильный бизнес',
+        u'Искусство, развлечения, масс-медиа',
+        u'Юристы',
+        u'Медицина, фармацевтика',
+        u'Управление персоналом, тренинги',
+        u'Туризм, гостиницы, рестораны',
+        u'Маркетинг, реклама, PR',
+        u'Рабочий персонал',
+        u'Банки, инвестиции, лизинг',
+        u'Информационные технологии, интернет, телеком',
+        u'Строительство, недвижимость',
+        u'Производство',
+        u'Бухгалтерия, управленческий учет, финансы предприятия',
+        u'Транспорт, логистика',
+        u'Продажи',
+    ])
+    total = pd.Series(total)
+    total = total.reindex(selection)
+    total = total / total.sum()
+    fig, axis = plt.subplots(10, 3)
+    fig.set_size_inches(18, 50)
+    for university, ax in zip(order, axis.flatten()):
+        table = pd.Series(university_specializations[university])
+        table = table.reindex(index=selection)
+        table = table / table.sum()
+        table = table / total - 1
+        table.plot(kind='barh', ax=ax)
+        ax.set_title(university)
         ax.set_xlim(-1, 1)
     fig.tight_layout()

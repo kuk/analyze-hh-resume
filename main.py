@@ -31,6 +31,7 @@ UNIVERSITIES_DIR = os.path.join(DATA_DIR, 'universities')
 UNIVERSITIES = os.path.join(DATA_DIR, 'universities.xlsx')
 VACANCIES = os.path.join(DATA_DIR, 'vacancies.json')
 TOTAL_VACANCIES = 302374
+SCHOOL_SPECIALIZATIONS = os.path.join(DATA_DIR, 'school_specializations.json')
 
 
 Resume = namedtuple(
@@ -231,6 +232,9 @@ def show_age_distribution(resumes):
     table = pd.Series(data)
     table.plot(ax=ax)
     ax.set_xlabel(u'Возраст')
+    ax.set_ylabel(u'Число резюме')
+    fig.set_size_inches(6, 4)
+    fig.savefig('fig.png', dpi=300, bbox_inches='tight')
     print 'Undefined: {0:0.2f}%'.format(float(undefined) / total * 100)
     print 'Unbound: {0:0.2f}%'.format(float(unbound) / total * 100)
 
@@ -250,6 +254,9 @@ def show_gender_distribution(resumes):
     table = pd.Series(data)
     table.plot(ax=ax, kind='bar')
     ax.set_xlabel(u'Пол')
+    ax.set_ylabel(u'Число вакансий')
+    fig.set_size_inches(6, 4)
+    fig.savefig('fig.png', dpi=300, bbox_inches='tight')
     print 'Undefined: {0:0.2f}%'.format(float(undefined) / total * 100)
 
 
@@ -326,6 +333,8 @@ def show_age_salary_correlation(resumes):
     ax.set_xlim(10, 65)
     ax.set_xlabel(u'Возраст')
     ax.set_ylabel(u'Ожидаемая зарплата')
+    fig.set_size_inches(6, 4)
+    fig.savefig('fig.png', dpi=300, bbox_inches='tight')
 
 
 def show_gender_salary_correlation(resumes):
@@ -345,18 +354,20 @@ def show_gender_salary_correlation(resumes):
     fig, ax = plt.subplots()
     table.plot(kind='box', ax=ax)
     ax.set_ylim(0, 110000)
-    ax.set_xlabel(u'Пол')
+    ax.set_xticklabels([u'Мужчины', u'Женщины'])
     ax.set_ylabel(u'Ожидаемая зарплата')
+    fig.set_size_inches(6, 4)
+    fig.savefig('fig.png', dpi=300, bbox_inches='tight')
 
 
 def load_school_universities(cap=10):
-    universities = Counter()
+    universities = defaultdict(Counter)
     with open(SCHOOLS) as file:
         data = json.load(file)
         for school in data:
-            top = Counter(school['universities'])
-            for university, share in top.most_common(cap):
-                universities[university] += 1
+            name = school['name']
+            for university, share in school['universities'].iteritems():
+                universities[name][university] = share
     return universities
 
 
@@ -453,6 +464,8 @@ def show_gender_specializations(resumes, specializations):
     fig, ax = plt.subplots()
     table.plot(kind='bar', ax=ax)
     ax.set_ylabel(u'Доля пола внутри отрасли')
+    fig.set_size_inches(12, 4)
+    fig.savefig('fig.png', dpi=300, bbox_inches='tight')
 
 
 def show_vacancy_resume_specializations(vacancies, resumes, specializations):
@@ -467,15 +480,17 @@ def show_vacancy_resume_specializations(vacancies, resumes, specializations):
         for group in groups:
             resume_specializations[group] += 1
     table = pd.DataFrame({
-        'vacancies': vacancy_specializations,
-        'resumes': resume_specializations
+        u'Вакансии': vacancy_specializations,
+        u'Резюме': resume_specializations
        })
     table = table.div(table.sum(axis=0), axis=1)
-    order = table['resumes'].sort_values(ascending=False).index
+    order = table[u'Резюме'].sort_values(ascending=False).index
     table = table.reindex(index=order)
     fig, ax = plt.subplots()
     table.plot(kind='bar', ax=ax)
     ax.set_ylabel(u'Доля вакансий и доля резюме по отраслям')
+    fig.set_size_inches(12, 4)
+    fig.savefig('fig.png', dpi=300, bbox_inches='tight')
 
 
 def show_vacancy_salary_bounds_distribution(vacancies):
@@ -625,6 +640,9 @@ def show_geography_salary(resumes, russian_areas):
     table.plot(kind='box', ax=ax)
     ax.set_ylim(0, 115000)
     ax.set_xticklabels(order, rotation=90)
+    ax.set_ylabel(u'Ожидаемая зарплата')
+    fig.set_size_inches(12, 4)
+    fig.savefig('fig.png', dpi=300, bbox_inches='tight')
 
 
 def show_university_salary(resumes, university_names):
@@ -683,6 +701,9 @@ def show_university_salary(resumes, university_names):
     table.plot(kind='box', ax=ax)
     ax.set_ylim(0, 115000)
     ax.set_xticklabels(order, rotation=90)
+    ax.set_ylabel(u'Ожидаемая зарплата')
+    fig.set_size_inches(12, 4)
+    fig.savefig('fig.png', dpi=300, bbox_inches='tight')
 
 
 def shorten_string(string, cap=20):
@@ -746,6 +767,7 @@ def show_geography_specializations(resumes, russian_areas, specializations):
         ax.set_title(area)
         ax.set_xlim(-1, 1)
     fig.tight_layout()
+    fig.savefig('fig.png', dpi=80, bbox_inches='tight')
 
 
 def show_universities_specializations(resumes, university_names, specializations):
@@ -837,3 +859,143 @@ def show_universities_specializations(resumes, university_names, specializations
         ax.set_title(university)
         ax.set_xlim(-1, 1)
     fig.tight_layout()
+    fig.savefig('fig.png', dpi=80, bbox_inches='tight')
+
+
+def normalize_distribution(distribution):
+    total = sum(distribution.itervalues())
+    normalized = {}
+    for key, value in distribution.iteritems():
+        normalized[key] = float(value) / total
+    return normalized
+
+
+def scale_distribution(distribution, scale):
+    scaled = {}
+    for key, value in distribution.iteritems():
+        scaled[key] = value * scale
+    return scaled
+
+
+def get_school_specializations(resumes, university_names, specializations,
+                               school_universities):
+    university_specializations = defaultdict(Counter)
+    for resume in resumes:
+        age = resume.age
+        if age and age > 25 and resume.area_id == 1:
+            for education in resume.educations:
+                university = university_names.get(education)
+                if university:
+                    groups = {
+                        specializations[_].group.name
+                        for _ in resume.specializations
+                    }
+                    for group in groups:
+                        university_specializations[university][group] += 1
+    for university in university_specializations:
+        distribution = normalize_distribution(university_specializations[university])
+        university_specializations[university] = Counter(distribution)
+    school_specializations = {}
+    for school, universities in school_universities.iteritems():
+        distribution = Counter()
+        for university, share in universities.iteritems():
+            if university in university_specializations:
+                distribution += Counter(scale_distribution(
+                    university_specializations[university],
+                    share
+                ))
+        school_specializations[school] = normalize_distribution(distribution)
+    return school_specializations
+
+
+def show_school_specializations(school_specializations):
+    selection = map(shorten_string, [
+        u'Страхование',
+        u'Закупки',
+        u'Государственная служба, некоммерческие организации',
+        u'Добыча сырья',
+        u'Спортивные клубы, фитнес, салоны красоты',
+        u'Наука, образование',
+        u'Автомобильный бизнес',
+        u'Искусство, развлечения, масс-медиа',
+        u'Юристы',
+        u'Медицина, фармацевтика',
+        u'Управление персоналом, тренинги',
+        u'Туризм, гостиницы, рестораны',
+        u'Маркетинг, реклама, PR',
+        u'Рабочий персонал',
+        u'Банки, инвестиции, лизинг',
+        u'Информационные технологии, интернет, телеком',
+        u'Строительство, недвижимость',
+        u'Производство',
+        u'Бухгалтерия, управленческий учет, финансы предприятия',
+        u'Транспорт, логистика',
+        u'Продажи',
+    ])
+    order = [
+        u'Лицей №1535',
+        u'Специализированный учебно-научный центр МГУ',
+        u'Школа №57',
+        u'Лицей №1501',
+        u'Лицей №2 «Вторая школа»',
+        u'Школа-интернат «Интеллектуал»',
+        u'Школа №179 МИОО',
+        u'Лицей №1580',
+        u'Лицей №1502',
+        u'Гимназия №1543',
+        u'Гимназия №1514',
+        u'Центр образования №548 «Царицыно»',
+        u'Школа №171',
+        u'Лицей №1568',
+        u'Школа №2007',
+        u'Школа №962',
+        u'Школа №192',
+        u'Школа №218',
+        u'Гимназия №1518',
+        u'Школа №1955',
+        u'Школа №1253',
+        u'Лицей №1574',
+        u'Гимназия №1534',
+        u'Школа №2086',
+        u'Гимназия №1567',
+        u'Школа №109',
+        u'Гимназия №1517',
+        u'Школа №1252 имени Сервантеса',
+        u'Школа №627',
+        u'Гимназия №1529',
+        u'Гимназия №1554',
+        u'Гимназия №1576',
+        u'Школа №1359',
+    ]
+    total = Counter()
+    for school, distribution in school_specializations.iteritems():
+        total += Counter(distribution)
+    total = {
+        shorten_string(specialization): share
+        for specialization, share in total.iteritems()
+    }
+    total = pd.Series(total)
+    total = total.reindex(selection)
+    total = total / total.sum()
+    fig, axis = plt.subplots(10, 3)
+    fig.set_size_inches(18, 50)
+    for school, ax in zip(order, axis.flatten()):
+        specializations = {
+            shorten_string(specialization): share
+            for specialization, share
+            in school_specializations[school].iteritems()
+        }
+        table = pd.Series(specializations)
+        table = table.reindex(index=selection)
+        table = table / table.sum()
+        table = table / total - 1
+        table.plot(kind='barh', ax=ax)
+        ax.set_xlim(-1, 1)
+        ax.set_title(school)
+    fig.tight_layout()
+    fig.savefig('fig.png', dpi=80, bbox_inches='tight')
+
+
+def dump_school_specializations(school_specializations):
+    with open(SCHOOL_SPECIALIZATIONS, 'w') as file:
+        json.dump(school_specializations, file)
